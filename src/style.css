@@ -91,6 +91,27 @@ html, body {
 .tally-num { display: block; font-family: var(--display); font-size: clamp(20px, 6vw, 34px); }
 .tally-label { display: block; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; margin-top: -2px; }
 
+.hud-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: auto;
+}
+.btn-music {
+  width: 46px; height: 46px;
+  border: 3px solid var(--ink);
+  background: #2a2d31;
+  color: #8a8f96;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 var(--ink);
+  transform: rotate(-3deg);
+  transition: transform .05s, background .15s, color .15s;
+}
+.btn-music:active { transform: translate(3px, 3px) rotate(-3deg); box-shadow: 0 0 0 var(--ink); }
+.btn-music.playing { background: var(--acid); color: var(--ink); }
+
 /* ----- Deck de commande (bas) ----- */
 .deck {
   position: fixed;

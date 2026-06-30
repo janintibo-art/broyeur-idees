@@ -16,14 +16,19 @@
   <!-- Grain / texture punk par dessus -->
   <div class="grain" aria-hidden="true"></div>
 
+  <audio id="song" src="song.mp3" loop preload="auto"></audio>
+
   <header class="hud">
     <div class="logo">
       <span class="logo-top">LE BROYEUR</span>
       <span class="logo-bot">À IDÉES NOIRES</span>
     </div>
-    <div class="tally" title="Pensées broyées">
-      <span class="tally-num" id="count">0</span>
-      <span class="tally-label">broyées</span>
+    <div class="hud-right">
+      <div class="tally" title="Pensées broyées">
+        <span class="tally-num" id="count">0</span>
+        <span class="tally-label">broyées</span>
+      </div>
+      <button id="music" class="btn-music" aria-label="Activer la musique" title="Musique">♪</button>
     </div>
   </header>
 

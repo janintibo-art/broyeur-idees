@@ -22,7 +22,14 @@ broyeur-idees/
 ├─ README.md                  # ce fichier
 ├─ public/
 │  ├─ punk.glb                # le personnage punk 3D + ses 12 animations (Meshy)
-│  └─ parchment.png           # le parchemin (fond transparent) sur lequel s'affiche le texte
+│  ├─ parchment.png           # le parchemin (fond transparent) qui porte le texte
+│  └─ song.mp3                # la chanson punk (musique de fond)
+├─ assets/                    # source de l'icone + splash de l'APK (smiley punk)
+│  ├─ icon-foreground.png
+│  ├─ icon-background.png
+│  ├─ icon-only.png
+│  ├─ splash.png
+│  └─ splash-dark.png
 ├─ src/
 │  ├─ main.js                 # logique : bouton BROYER, micro, compteur
 │  ├─ scene.js                # la scène 3D : charge punk.glb, le broyeur, l'animation
@@ -137,6 +144,14 @@ c'est 2 lignes à changer dans `src/main.js`.)
   (plus grand = le parchemin descend plus lentement, plus le temps de lire).
 - **Le parchemin** : remplace `public/parchment.png` (PNG à fond transparent).
   Le texte écrit s'adapte tout seul à la taille du parchemin.
+- **La musique** : remplace `public/song.mp3`. Elle démarre au 1er « BROYER »
+  et le bouton ♪ (en haut à droite) coupe / relance le son.
+- **Les smileys** : couleurs dans `SMILEY_COLORS` (haut de `src/scene.js`).
+- **L'icône de l'APK** : remplace les images du dossier `assets/`
+  (`icon-foreground.png` = le dessin, `icon-background.png` = le fond).
+  GitHub régénère toutes les tailles automatiquement au build.
+- **La position du punk** : objet `PUNK` en haut de `src/scene.js`
+  (`x` = gauche/droite, `ry` = orientation ; ajoute `+ Math.PI` s'il est de dos).
 
 ### 🤘 Le personnage punk
 

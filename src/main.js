@@ -8,12 +8,33 @@ const grindBtn = document.getElementById('grind');
 const micBtn = document.getElementById('mic');
 const countEl = document.getElementById('count');
 const hintEl = document.getElementById('hint');
+const song = document.getElementById('song');
+const musicBtn = document.getElementById('music');
 
 initScene(canvas);
 
-// --- compteur de pensees broyees (memorise sur l'appareil) ---
+// --- compteur ---
 let count = parseInt(localStorage.getItem('broyees') || '0', 10);
 countEl.textContent = count;
+
+// --- musique ---
+let musicStarted = false;
+if (song) song.volume = 0.55;
+
+function startMusic() {
+  if (!song) return;
+  song.play().then(() => {
+    musicStarted = true;
+    musicBtn.classList.add('playing');
+  }).catch(() => { /* sera relance par le bouton */ });
+}
+
+if (musicBtn && song) {
+  musicBtn.addEventListener('click', () => {
+    if (song.paused) startMusic();
+    else { song.pause(); musicBtn.classList.remove('playing'); }
+  });
+}
 
 function broyer() {
   const text = input.value.trim();
@@ -22,6 +43,7 @@ function broyer() {
     setTimeout(() => input.parentElement.classList.remove('shake'), 300);
     return;
   }
+  if (!musicStarted) startMusic(); // demarre la chanson au 1er broyage
   grindThought(text);
   count++;
   countEl.textContent = count;

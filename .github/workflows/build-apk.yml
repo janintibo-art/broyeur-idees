@@ -41,6 +41,9 @@ jobs:
             sed -i 's#<application#<uses-permission android:name="android.permission.RECORD_AUDIO"/>\n    <application#' "$MANIFEST"
           fi
 
+      - name: Generer l'icone et le splash (smiley punk)
+        run: npx capacitor-assets generate --android
+
       - name: Synchroniser Capacitor
         run: npx cap sync android
 
