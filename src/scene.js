@@ -23,9 +23,9 @@ const IDLE_CLIP = 'Talk_with_Right_Hand_Open';
 const GRIND_CLIP = 'Punch_Combo_5';
 
 // --- reglages ---
-const CAM = { x: 1.0, y: 2.3, z: 9.5 };
-const LOOK = { x: 1.0, y: 1.35, z: 0.5 };
-const PUNK = { x: 2.4, z: 0.9, ry: -Math.PI * 0.30 }; // a droite du levier ; ry = orientation (ajuste / +Math.PI pour retourner)
+const CAM = { x: 1.0, y: 2.4, z: 9.3 };
+const LOOK = { x: 1.0, y: 1.8, z: 0.5 };
+const PUNK = { x: 2.4, y: 0, z: 0.9, ry: -Math.PI * 0.30 }; // a droite du levier ; ry = orientation (+Math.PI le retourne) ; y = hauteur
 const DROP_DURATION = 2.6;
 
 const SMILEY_COLORS = ['#ff4d4d', '#ff9f1c', '#ffd400', '#5cd85c', '#36e0ff',
@@ -174,36 +174,12 @@ function loadPunk() {
   loader.load(url, (gltf) => {
     try {
       const model = gltf.scene;
-      model.updateWorldMatrix(true, true);
-
-      // boite englobante FIABLE : assemblee depuis les geometries (setFromObject
-      // peut renvoyer une boite vide -> NaN -> punk invisible, sur un mesh anime)
-      const box = new THREE.Box3();
-      model.traverse((o) => {
-        if (o.isMesh && o.geometry) {
-          o.geometry.computeBoundingBox();
-          const bb = o.geometry.boundingBox;
-          if (bb && isFinite(bb.min.x) && isFinite(bb.max.x)) {
-            box.union(bb.clone().applyMatrix4(o.matrixWorld));
-          }
-        }
-      });
-
-      let s = 1, cx = 0, cz = 0, minY = 0;
-      if (!box.isEmpty()) {
-        const size = new THREE.Vector3(); box.getSize(size);
-        const center = new THREE.Vector3(); box.getCenter(center);
-        if (isFinite(size.y) && size.y > 1e-4) s = 1.9 / size.y;
-        if (isFinite(center.x)) cx = center.x;
-        if (isFinite(center.z)) cz = center.z;
-        if (isFinite(box.min.y)) minY = box.min.y;
-      }
-
+      // Le modele est DEJA a la bonne echelle (~1,70 m) dans le fichier. On ne le
+      // redimensionne PAS (l'auto-echelle echoue a cause du squelette anime,
+      // scale interne 0.01). On le place, point. Ajuste PUNK.y s'il flotte/s'enfonce.
       const root = new THREE.Group();
-      model.scale.setScalar(s);
-      model.position.set(-cx * s, -minY * s, -cz * s); // recentre + pose au sol
       root.add(model);
-      root.position.set(PUNK.x, 0, PUNK.z);
+      root.position.set(PUNK.x, PUNK.y, PUNK.z);
       root.rotation.y = PUNK.ry;
       scene.add(root);
       model.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
