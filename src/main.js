@@ -1,5 +1,5 @@
 import './style.css';
-import { initScene, grindThought } from './scene.js';
+import { initScene, grindThought, setAudioAnalyser } from './scene.js';
 import { voiceSupported, startVoice, stopVoice, isListening } from './voice.js';
 
 const canvas = document.getElementById('stage');
@@ -19,10 +19,29 @@ countEl.textContent = count;
 
 // --- musique ---
 let musicStarted = false;
+let audioGraph = null;
 if (song) song.volume = 0.55;
+
+// branche l'audio sur un analyseur -> le punk bouge en rythme (scene.js)
+function ensureAudioGraph() {
+  if (audioGraph || !song) return;
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    const srcNode = ctx.createMediaElementSource(song);
+    const an = ctx.createAnalyser();
+    an.fftSize = 256;
+    srcNode.connect(an);
+    an.connect(ctx.destination);
+    audioGraph = { ctx, analyser: an };
+    setAudioAnalyser(an);
+  } catch (e) { /* analyseur indispo : le punk bougera quand meme doucement */ }
+}
 
 function startMusic() {
   if (!song) return;
+  ensureAudioGraph();
+  if (audioGraph && audioGraph.ctx.state === 'suspended') audioGraph.ctx.resume();
   song.play().then(() => {
     musicStarted = true;
     musicBtn.classList.add('playing');

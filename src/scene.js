@@ -15,6 +15,7 @@ let grind = 0, shake = 0;
 let reduceMotion = false;
 
 let mixer = null, idleAction = null, punchClip = null, fallbackPunk = null;
+let punkRoot = null, analyser = null, freqData = null, beat = 0;
 let parchmentImg = null, parchmentReady = false;
 let SMILEY_TEX = [];
 
@@ -54,6 +55,15 @@ export function initScene(canvas) {
   const glowM = new THREE.PointLight(0xff2d7e, 26, 26, 2);
   glowM.position.set(4.5, 2.2, -1); scene.add(glowM);
 
+  // projecteur braque sur le punk + halo vert punk
+  const punkSpot = new THREE.SpotLight(0xffffff, 120, 16, Math.PI / 6, 0.6, 1.0);
+  punkSpot.position.set(PUNK.x + 1.0, 5.0, PUNK.z + 3.0);
+  punkSpot.target.position.set(PUNK.x, 1.0, PUNK.z);
+  scene.add(punkSpot); scene.add(punkSpot.target);
+  const punkRim = new THREE.PointLight(0xc6ff3f, 14, 9, 2);
+  punkRim.position.set(PUNK.x - 0.8, 1.7, PUNK.z + 0.6);
+  scene.add(punkRim);
+
   buildSmileys();
   buildFloor();
   buildGrinder();
@@ -65,6 +75,12 @@ export function initScene(canvas) {
   resize();
   window.addEventListener('resize', resize);
   renderer.setAnimationLoop(tick);
+}
+
+// reçoit l'analyseur audio (depuis main.js) pour faire headbanguer le punk en rythme
+export function setAudioAnalyser(a) {
+  analyser = a;
+  freqData = new Uint8Array(a.frequencyBinCount);
 }
 
 // ---------- smileys (textures dessinees) ----------
@@ -168,6 +184,7 @@ function loadParchment() {
 // ---------- punk (GLB) ----------
 function loadPunk() {
   fallbackPunk = buildFallbackPunk(); // cubes visibles pendant le chargement / si echec
+  punkRoot = fallbackPunk;
 
   const url = (import.meta.env.BASE_URL || './') + 'punk.glb';
   const loader = new GLTFLoader();
@@ -183,6 +200,7 @@ function loadPunk() {
       root.rotation.y = PUNK.ry;
       scene.add(root);
       model.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
+      punkRoot = root;
 
       if (fallbackPunk) { scene.remove(fallbackPunk); fallbackPunk = null; } // le vrai punk remplace les cubes
 
@@ -345,7 +363,24 @@ function tick() {
   const spin = 1.2 + grind * 26;
   if (leftRoller) leftRoller.rotation.x += spin * dt;
   if (rightRoller) rightRoller.rotation.x -= spin * dt;
-  if (lever) lever.rotation.x = (grind > 0.05 ? Math.sin(time * 22) * 0.22 : 0) - 0.05;
+  if (lever) lever.rotation.x = -0.05 - grind * 0.7 + (grind > 0.1 ? Math.sin(time * 30) * 0.05 : 0); // tire d'un coup quand on broie
+
+  // le punk headbangue en rythme avec la musique (analyse audio en direct)
+  if (punkRoot) {
+    let bass = 0;
+    if (analyser && freqData) {
+      analyser.getByteFrequencyData(freqData);
+      let sum = 0; const n = 8;
+      for (let i = 1; i <= n; i++) sum += freqData[i];
+      bass = sum / (n * 255);
+    }
+    beat += (bass - beat) * 0.25;
+    const idle = Math.sin(time * 3) * 0.02;
+    const energy = beat + grind * 0.4;
+    punkRoot.position.y = PUNK.y + idle + energy * 0.16;            // rebond sur le beat
+    punkRoot.rotation.x = -energy * 0.22;                            // penche la tete (headbang)
+    punkRoot.rotation.z = Math.sin(time * 7) * 0.02 * (0.3 + energy);
+  }
 
   if (paper) {
     const u = paper.userData; u.t += dt;
