@@ -14,7 +14,7 @@ let paper = null;
 let grind = 0, shake = 0;
 let reduceMotion = false;
 
-let mixer = null, idleAction = null, punchClip = null;
+let mixer = null, idleAction = null, punchClip = null, fallbackPunk = null;
 let parchmentImg = null, parchmentReady = false;
 let SMILEY_TEX = [];
 
@@ -167,28 +167,48 @@ function loadParchment() {
 
 // ---------- punk (GLB) ----------
 function loadPunk() {
+  fallbackPunk = buildFallbackPunk(); // cubes visibles pendant le chargement / si echec
+
   const url = (import.meta.env.BASE_URL || './') + 'punk.glb';
   const loader = new GLTFLoader();
   loader.load(url, (gltf) => {
     try {
       const model = gltf.scene;
       model.updateWorldMatrix(true, true);
-      const box = new THREE.Box3().setFromObject(model);
-      const size = new THREE.Vector3(); box.getSize(size);
-      const center = new THREE.Vector3(); box.getCenter(center);
-      let s = 1.9 / (size.y || 1);
-      if (!isFinite(s) || s <= 0) s = 1;
 
-      // on recentre le modele dans un groupe : peu importe son origine interne,
-      // il est pose au sol et centre -> il apparait la ou on le place.
+      // boite englobante FIABLE : assemblee depuis les geometries (setFromObject
+      // peut renvoyer une boite vide -> NaN -> punk invisible, sur un mesh anime)
+      const box = new THREE.Box3();
+      model.traverse((o) => {
+        if (o.isMesh && o.geometry) {
+          o.geometry.computeBoundingBox();
+          const bb = o.geometry.boundingBox;
+          if (bb && isFinite(bb.min.x) && isFinite(bb.max.x)) {
+            box.union(bb.clone().applyMatrix4(o.matrixWorld));
+          }
+        }
+      });
+
+      let s = 1, cx = 0, cz = 0, minY = 0;
+      if (!box.isEmpty()) {
+        const size = new THREE.Vector3(); box.getSize(size);
+        const center = new THREE.Vector3(); box.getCenter(center);
+        if (isFinite(size.y) && size.y > 1e-4) s = 1.9 / size.y;
+        if (isFinite(center.x)) cx = center.x;
+        if (isFinite(center.z)) cz = center.z;
+        if (isFinite(box.min.y)) minY = box.min.y;
+      }
+
       const root = new THREE.Group();
       model.scale.setScalar(s);
-      model.position.set(-center.x * s, -box.min.y * s, -center.z * s);
+      model.position.set(-cx * s, -minY * s, -cz * s); // recentre + pose au sol
       root.add(model);
       root.position.set(PUNK.x, 0, PUNK.z);
       root.rotation.y = PUNK.ry;
       scene.add(root);
       model.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
+
+      if (fallbackPunk) { scene.remove(fallbackPunk); fallbackPunk = null; } // le vrai punk remplace les cubes
 
       mixer = new THREE.AnimationMixer(model);
       const byName = {};
@@ -197,12 +217,10 @@ function loadPunk() {
       punchClip = byName[GRIND_CLIP] || byName['Seated_Fist_Pump'] || gltf.animations[0];
       if (idleClip) { idleAction = mixer.clipAction(idleClip); idleAction.play(); }
     } catch (e) {
-      console.warn('Erreur init punk, fallback.', e);
-      buildFallbackPunk();
+      console.warn('Erreur init punk (on garde les cubes).', e);
     }
   }, undefined, (err) => {
-    console.warn('Modele punk non charge, fallback.', err);
-    buildFallbackPunk();
+    console.warn('Modele punk non charge (on garde les cubes).', err);
   });
 }
 
@@ -221,6 +239,7 @@ function buildFallbackPunk() {
     c.position.set(0, 2.4, -0.16 + i * 0.08); p.add(c);
   }
   scene.add(p);
+  return p;
 }
 
 function punkPunch() {
