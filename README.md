@@ -20,9 +20,11 @@ broyeur-idees/
 ├─ .gitignore
 ├─ LICENSE
 ├─ README.md                  # ce fichier
+├─ public/
+│  └─ punk.glb                # le personnage punk 3D + ses 12 animations (Meshy)
 ├─ src/
 │  ├─ main.js                 # logique : bouton BROYER, micro, compteur
-│  ├─ scene.js                # la scène 3D (le punk + le broyeur + l'animation)
+│  ├─ scene.js                # la scène 3D : charge punk.glb, le broyeur, l'animation
 │  ├─ voice.js                # reconnaissance vocale (APK + navigateur)
 │  └─ style.css               # le style « zine / punk »
 └─ .github/
@@ -126,10 +128,34 @@ c'est 2 lignes à changer dans `src/main.js`.)
 
 - **Le nom / le titre** : `index.html` (le bloc `.logo`) et `capacitor.config.json`.
 - **Les couleurs** : variables en haut de `src/style.css` (`--acid`, `--magenta`…).
-- **Le punk et le broyeur** : tout est dans `src/scene.js`
-  (crête, lunettes, rouleaux, étincelles, confettis…). Cherche `buildPunk()`
-  et `buildGrinder()`.
+- **Le broyeur, les étincelles, les confettis** : dans `src/scene.js`
+  (`buildGrinder()`, `shredPaper()`…).
 - **La langue de la dictée** : `'fr-FR'` dans `src/voice.js`.
+
+### 🤘 Le personnage punk
+
+Le punk est un vrai modèle 3D (**Meshy**) : `public/punk.glb`. Le fichier
+contient le maillage **et 12 animations**. Tout est géré dans `loadPunk()` de
+`src/scene.js`.
+
+- **Changer de personnage** : remplace `public/punk.glb` par ton propre `.glb`
+  (idéalement avec un squelette + animations). Le code remet automatiquement le
+  perso à la bonne taille et le pose au sol.
+- **Choisir les animations** : en haut de `src/scene.js` :
+  ```js
+  const IDLE_CLIP  = 'Talk_with_Right_Hand_Open'; // au repos
+  const GRIND_CLIP = 'Punch_Combo_5';             // quand on broie
+  ```
+  Animations dispo dans ce modèle : `Formal_Bow`, `Knock_Down`,
+  `Lie_Down_Hands_Spread`, `Motivational_Cheer`, `Punch_Combo_5`, `Running`,
+  `Seated_Fist_Pump`, `Skip_Forward`, `Stand_and_Drink`,
+  `Talk_with_Right_Hand_Open`, `Walking_Scan_with_Sudden_Look_Back`, `Walking`.
+- **L'orienter / le déplacer** : dans `loadPunk()`, les lignes
+  `model.position.x`, `model.position.z` et surtout
+  `model.rotation.y = Math.PI * 0.30;` (augmente la valeur pour qu'il tourne).
+
+> L'APK pèse ~20 Mo à cause du modèle 3D — c'est normal, et il fonctionne
+> **hors-ligne** (le `.glb` est empaqueté dedans).
 
 ---
 
@@ -149,4 +175,5 @@ relais, sans souci).
 
 ---
 
-Fait avec des boîtes, des cônes et beaucoup d'étincelles. Bon broyage. 🤘
+Le broyeur est fait maison (boîtes, cônes, étincelles) et le punk est un vrai
+modèle 3D animé. Bon broyage. 🤘
