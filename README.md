@@ -1,0 +1,152 @@
+# 🤘 Le Broyeur à idées noires
+
+Tu écris (ou tu **dis**) une pensée négative, tu appuies sur **BROYER**, et un
+**punk 3D** la jette dans un broyeur : la feuille tombe dans les rouleaux, part
+en confettis avec des étincelles, et le compteur de « pensées broyées » monte.
+
+Petit défouloir cathartique : on met la pensée dehors, on la regarde partir en
+miettes. C'est tout l'intérêt.
+
+---
+
+## 🗂️ Arborescence du projet
+
+```
+broyeur-idees/
+├─ index.html                 # la page (canvas 3D + barre de saisie + micro)
+├─ package.json               # dépendances (Vite, Capacitor, Three.js…)
+├─ vite.config.js             # config du build web
+├─ capacitor.config.json      # nom + identifiant de l'appli Android
+├─ .gitignore
+├─ LICENSE
+├─ README.md                  # ce fichier
+├─ src/
+│  ├─ main.js                 # logique : bouton BROYER, micro, compteur
+│  ├─ scene.js                # la scène 3D (le punk + le broyeur + l'animation)
+│  ├─ voice.js                # reconnaissance vocale (APK + navigateur)
+│  └─ style.css               # le style « zine / punk »
+└─ .github/
+   └─ workflows/
+      └─ build-apk.yml        # GitHub fabrique l'APK tout seul
+```
+
+> Le dossier `android/` n'est **pas** dans le projet : il est généré
+> automatiquement par GitHub à chaque build. Tu n'as rien à faire.
+
+---
+
+## 🚀 Mettre le projet sur GitHub depuis Termux
+
+1. **Installer les outils dans Termux** (une seule fois) :
+   ```bash
+   pkg update && pkg install git -y
+   ```
+
+2. **Décompresser le zip** et entrer dans le dossier :
+   ```bash
+   unzip broyeur-idees.zip
+   cd broyeur-idees
+   ```
+
+3. **Créer un dépôt vide sur GitHub** (depuis le site ou l'appli GitHub) :
+   par exemple `broyeur-idees`. Ne coche **rien** (pas de README, pas de
+   .gitignore) pour éviter les conflits.
+
+4. **Envoyer le code** (remplace `TON-PSEUDO` par ton pseudo GitHub) :
+   ```bash
+   git init
+   git add .
+   git commit -m "Premier jet du broyeur"
+   git branch -M main
+   git remote add origin https://github.com/TON-PSEUDO/broyeur-idees.git
+   git push -u origin main
+   ```
+   GitHub te demandera ton identifiant. Le mot de passe doit être un
+   **token** (Settings → Developer settings → *Personal access tokens*), pas
+   ton vrai mot de passe.
+
+---
+
+## 📦 Récupérer l'APK (fabriqué par GitHub, pas par ton téléphone)
+
+Dès que tu pushes, GitHub lance le workflow tout seul.
+
+1. Va sur ton dépôt → onglet **Actions**.
+2. Clique sur le dernier run **« Build APK »**. Attends qu'il passe au vert
+   (≈ 3–6 min la première fois).
+3. En bas de la page, section **Artifacts**, télécharge
+   **`broyeur-idees-apk`** (c'est un `.zip` contenant `app-debug.apk`).
+4. Décompresse-le, tu obtiens **`app-debug.apk`**.
+
+> Tu peux aussi lancer le build à la main : Actions → *Build APK* →
+> **Run workflow**.
+
+---
+
+## 📲 Installer l'APK sur ton téléphone
+
+1. Ouvre `app-debug.apk` depuis tes fichiers.
+2. Android va prévenir : autorise **« installer des applis inconnues »** pour
+   l'appli qui ouvre le fichier (Fichiers ou Chrome).
+3. Installe, ouvre, broie. 🤘
+
+C'est un APK **debug** (non signé pour le Play Store) : parfait pour un usage
+perso, mais ne se publie pas tel quel sur le Store.
+
+---
+
+## 🧪 Tester sans rien installer (avant l'APK)
+
+Sur ordinateur, ou dans Termux avec Node :
+```bash
+npm install
+npm run dev
+```
+Ouvre l'adresse affichée (genre `http://localhost:5173`) dans **Chrome**.
+Là, le micro fonctionne via le navigateur.
+
+---
+
+## 🎙️ À propos du micro (« on la dit au logiciel »)
+
+- **Dans l'APK** : la dictée passe par le module natif Android
+  (`@capacitor-community/speech-recognition`). La permission micro est ajoutée
+  automatiquement par le workflow.
+- **Dans un navigateur** : la dictée passe par la *Web Speech API* (marche
+  surtout dans **Chrome**). Si elle n'est pas dispo, le bouton micro se grise
+  et tu peux toujours **écrire**.
+
+Le micro **remplit la barre de texte** en direct ; ensuite tu appuies sur
+**BROYER**. (Si tu veux que ça broie tout seul à la fin de la phrase, dis-le,
+c'est 2 lignes à changer dans `src/main.js`.)
+
+---
+
+## 🎨 Personnaliser
+
+- **Le nom / le titre** : `index.html` (le bloc `.logo`) et `capacitor.config.json`.
+- **Les couleurs** : variables en haut de `src/style.css` (`--acid`, `--magenta`…).
+- **Le punk et le broyeur** : tout est dans `src/scene.js`
+  (crête, lunettes, rouleaux, étincelles, confettis…). Cherche `buildPunk()`
+  et `buildGrinder()`.
+- **La langue de la dictée** : `'fr-FR'` dans `src/voice.js`.
+
+---
+
+## 🛠️ Si le build GitHub échoue
+
+C'est souvent un détail au premier essai. Regarde l'étape rouge dans **Actions** :
+
+- **Licences SDK / Android** : relance simplement le workflow (Run workflow).
+- **Version de Java** : ce projet vise **Java 17** (Capacitor 6). C'est déjà
+  réglé dans le workflow.
+- **Téléphone à jour** : pour la dictée, garde **Android System WebView** et
+  **Chrome** à jour (Play Store).
+
+L'appli fonctionne **hors-ligne** : Three.js est empaqueté dans l'APK. Seules
+les polices Google se chargent en ligne (sinon une police système prend le
+relais, sans souci).
+
+---
+
+Fait avec des boîtes, des cônes et beaucoup d'étincelles. Bon broyage. 🤘

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#0a0a0a" />
+  <title>Le Broyeur a idees noires</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- Scene 3D (le punk + le broyeur) -->
+  <canvas id="stage"></canvas>
+
+  <!-- Grain / texture punk par dessus -->
+  <div class="grain" aria-hidden="true"></div>
+
+  <header class="hud">
+    <div class="logo">
+      <span class="logo-top">LE BROYEUR</span>
+      <span class="logo-bot">À IDÉES NOIRES</span>
+    </div>
+    <div class="tally" title="Pensées broyées">
+      <span class="tally-num" id="count">0</span>
+      <span class="tally-label">broyées</span>
+    </div>
+  </header>
+
+  <div class="deck">
+    <div class="tape">
+      <input
+        id="thought"
+        type="text"
+        autocomplete="off"
+        autocapitalize="sentences"
+        placeholder="Écris ta pensée noire ici…"
+        aria-label="Ta pensée à broyer" />
+    </div>
+    <button id="mic" class="btn-mic" aria-label="Dicter la pensée" title="Dicter">
+      <span class="mic-dot"></span>🎙
+    </button>
+    <button id="grind" class="btn-grind">BROYER</button>
+  </div>
+
+  <p class="hint" id="hint">Écris-la ou dis-la. Le punk s'occupe du reste.</p>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

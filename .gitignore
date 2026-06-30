@@ -1,0 +1,14 @@
+# dependances
+node_modules/
+
+# build web
+dist/
+
+# plateforme Android (regeneree par GitHub Actions a chaque build)
+android/
+
+# divers
+*.log
+.DS_Store
+.vscode/
+.idea/
