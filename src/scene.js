@@ -2,30 +2,40 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 // =============================================================
-//  LA SCENE 3D : un vrai punk 3D (modele Meshy) qui broie
-//  les pensees noires dans un broyeur a rouleaux.
+//  LA SCENE 3D : un punk 3D (Meshy) qui broie lentement un
+//  parchemin sur lequel s'affiche la pensee noire ecrite.
 // =============================================================
 
 let renderer, scene, camera, clock;
 let leftRoller, rightRoller, lever;
 let sparks, sparkVel = [];
-let shards = [];          // confettis de papier broye
-let paper = null;         // la feuille en train de tomber
-let grind = 0;            // intensite de broyage 0..1 (decroit)
-let shake = 0;            // secousse camera
+let shards = [];
+let paper = null;
+let grind = 0;
+let shake = 0;
 let reduceMotion = false;
 
 // --- le punk (GLB) ---
 let mixer = null;
 let idleAction = null;
 let punchClip = null;
-let punkLoaded = false;
+
+// --- le parchemin (image) ---
+let parchmentImg = null;
+let parchmentReady = false;
 
 const NEON = [0xc6ff3f, 0xff2d7e, 0xffd400, 0x36e0ff];
 
-// Clip joue au repos / clip joue quand on broie (noms du fichier Meshy)
+// Animations Meshy : repos / quand on broie
 const IDLE_CLIP = 'Talk_with_Right_Hand_Open';
 const GRIND_CLIP = 'Punch_Combo_5';
+
+// --- cadrage camera (regle ici si besoin) ---
+const CAM = { x: -0.3, y: 2.2, z: 9.5 };
+const LOOK = { x: -0.3, y: 1.4, z: 0.5 };
+
+// duree de descente du parchemin (en secondes) -> plus grand = plus lent
+const DROP_DURATION = 2.6;
 
 export function initScene(canvas) {
   reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -35,15 +45,14 @@ export function initScene(canvas) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x0a0a0a, 0.05);
+  scene.fog = new THREE.FogExp2(0x0a0a0a, 0.028);
 
-  camera = new THREE.PerspectiveCamera(52, 1, 0.1, 100);
-  camera.position.set(0.4, 1.9, 7.2);
+  camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+  camera.position.set(CAM.x, CAM.y, CAM.z);
 
-  // ---- Lumieres ----
   scene.add(new THREE.AmbientLight(0x6a6a78, 1.3));
-  scene.add(new THREE.HemisphereLight(0x8899ff, 0x201a15, 0.6));
-  const key = new THREE.DirectionalLight(0xffffff, 2.6);
+  scene.add(new THREE.HemisphereLight(0x8899ff, 0x201a15, 0.7));
+  const key = new THREE.DirectionalLight(0xffffff, 2.7);
   key.position.set(4, 9, 6);
   scene.add(key);
   const glowG = new THREE.PointLight(0xc6ff3f, 26, 26, 2);
@@ -56,6 +65,7 @@ export function initScene(canvas) {
   buildFloor();
   buildGrinder();
   buildSparks();
+  loadParchment();
   loadPunk();
 
   clock = new THREE.Clock();
@@ -153,9 +163,16 @@ function makeRoller(mat) {
   return r;
 }
 
-// =============================================================
-//  LE PUNK 3D (modele GLB Meshy : maillage + 12 animations)
-// =============================================================
+// ---------- parchemin ----------
+function loadParchment() {
+  const url = (import.meta.env.BASE_URL || './') + 'parchment.png';
+  parchmentImg = new Image();
+  parchmentImg.onload = () => { parchmentReady = true; };
+  parchmentImg.onerror = () => { parchmentReady = false; };
+  parchmentImg.src = url;
+}
+
+// ---------- le punk (GLB) ----------
 function loadPunk() {
   const url = (import.meta.env.BASE_URL || './') + 'punk.glb';
   const loader = new GLTFLoader();
@@ -165,7 +182,6 @@ function loadPunk() {
       const model = gltf.scene;
       scene.add(model);
 
-      // mise a l'echelle automatique : ~1.9 d'unite de haut, pieds au sol
       model.updateWorldMatrix(true, true);
       let box = new THREE.Box3().setFromObject(model);
       const size = new THREE.Vector3();
@@ -175,14 +191,13 @@ function loadPunk() {
       model.updateWorldMatrix(true, true);
       box = new THREE.Box3().setFromObject(model);
 
-      model.position.x = -2.7;                 // a gauche du broyeur
-      model.position.z = 0.7;
-      model.position.y -= box.min.y;           // pose les pieds sur le sol
-      model.rotation.y = Math.PI * 0.30;       // <-- tourne le punk (ajuste si besoin)
+      model.position.x = -1.6;                 // a gauche du broyeur, dans le cadre
+      model.position.z = 1.0;
+      model.position.y -= box.min.y;           // pieds au sol
+      model.rotation.y = Math.PI * 0.30;       // <-- oriente le punk (ajuste si besoin ; +Math.PI le retourne)
 
       model.traverse((o) => { if (o.isMesh) o.frustumCulled = false; });
 
-      // animations
       mixer = new THREE.AnimationMixer(model);
       const byName = {};
       gltf.animations.forEach((c) => { byName[c.name] = c; });
@@ -192,7 +207,6 @@ function loadPunk() {
         idleAction = mixer.clipAction(idleClip);
         idleAction.play();
       }
-      punkLoaded = true;
     },
     undefined,
     (err) => {
@@ -202,10 +216,9 @@ function loadPunk() {
   );
 }
 
-// punk de secours si le GLB manque (rare)
 function buildFallbackPunk() {
   const p = new THREE.Group();
-  p.position.set(-2.7, 0, 0.7);
+  p.position.set(-1.6, 0, 1.0);
   const body = new THREE.Mesh(
     new THREE.BoxGeometry(0.6, 1.4, 0.4),
     new THREE.MeshStandardMaterial({ color: 0x111114, roughness: 0.6 })
@@ -229,7 +242,6 @@ function buildFallbackPunk() {
   scene.add(p);
 }
 
-// le punk "frappe" la pensee au moment du broyage
 function punkPunch() {
   if (!mixer || !punchClip || !idleAction) return;
   const a = mixer.clipAction(punchClip);
@@ -240,7 +252,6 @@ function punkPunch() {
   a.fadeIn(0.12);
   a.play();
   idleAction.fadeOut(0.12);
-
   const onFinished = (e) => {
     if (e.action === a) {
       mixer.removeEventListener('finished', onFinished);
@@ -268,10 +279,10 @@ function buildSparks() {
   for (let i = 0; i < N; i++) sparkVel.push(new THREE.Vector3());
 }
 
-function burstSparks() {
+function burstSparks(px) {
   const pos = sparks.geometry.attributes.position.array;
   for (let i = 0; i < pos.length / 3; i++) {
-    pos[i * 3] = 0.6 + (Math.random() - 0.5) * 1.2;
+    pos[i * 3] = px + (Math.random() - 0.5) * 1.2;
     pos[i * 3 + 1] = 1.55;
     pos[i * 3 + 2] = 0.2 + (Math.random() - 0.5) * 0.3;
     sparkVel[i].set((Math.random() - 0.5) * 4, Math.random() * 3 + 1, (Math.random() - 0.5) * 2);
@@ -281,7 +292,8 @@ function burstSparks() {
 }
 
 // =============================================================
-//  BROYER UNE PENSEE
+//  BROYER : on cree le parchemin avec le texte, il descend
+//  lentement, puis il est broye.
 // =============================================================
 export function grindThought(text) {
   if (paper) shredPaper();
@@ -290,63 +302,87 @@ export function grindThought(text) {
   scene.add(paper);
 }
 
+// choisit la plus grande taille de police qui rentre, et renvoie les lignes
+function fitText(ctx, text, maxW, maxH, maxFont, minFont) {
+  for (let fs = maxFont; fs >= minFont; fs -= 2) {
+    ctx.font = '700 ' + fs + 'px Georgia, "Times New Roman", serif';
+    const words = text.split(/\s+/).filter(Boolean);
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; }
+      else line = test;
+    }
+    if (line) lines.push(line);
+    const lh = fs * 1.2;
+    if (lines.length * lh <= maxH) return { fs, lines, lh };
+  }
+  ctx.font = '700 ' + minFont + 'px Georgia, serif';
+  return { fs: minFont, lines: [text], lh: minFont * 1.2 };
+}
+
 function makePaper(text) {
+  const W = 820, H = 910;
   const cv = document.createElement('canvas');
-  cv.width = 512; cv.height = 320;
+  cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d');
-  ctx.fillStyle = '#ece7d9';
-  ctx.fillRect(0, 0, cv.width, cv.height);
-  for (let i = 0; i < 600; i++) {
-    ctx.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.05) + ')';
-    ctx.fillRect(Math.random() * cv.width, Math.random() * cv.height, 2, 2);
+
+  if (parchmentReady) {
+    ctx.drawImage(parchmentImg, 0, 0, W, H);
+  } else {
+    // secours : rectangle parchemin si l'image n'est pas prete
+    ctx.fillStyle = '#d9c79c';
+    ctx.fillRect(W * 0.1, H * 0.08, W * 0.8, H * 0.84);
   }
-  ctx.fillStyle = '#111';
-  ctx.font = '700 40px "Space Mono", "Courier New", monospace';
+
+  // zone d'ecriture (interieur du parchemin, hors enroulements)
+  const x0 = W * 0.18, x1 = W * 0.82;
+  const y0 = H * 0.20, y1 = H * 0.80;
+  const innerW = x1 - x0, innerH = y1 - y0;
+
+  const t = String(text || '').trim();
+  const { lines, lh } = fitText(ctx, t, innerW, innerH, 78, 30);
+
+  ctx.fillStyle = '#2c1c08';
   ctx.textAlign = 'center';
-  const words = String(text || '').toUpperCase().split(/\s+/);
-  const lines = [];
-  let line = '';
-  for (const w of words) {
-    if ((line + ' ' + w).length > 16) { lines.push(line.trim()); line = w; }
-    else line += ' ' + w;
-  }
-  if (line.trim()) lines.push(line.trim());
-  const shown = lines.slice(0, 5);
-  const startY = cv.height / 2 - (shown.length - 1) * 26;
-  shown.forEach((l, i) => ctx.fillText(l, cv.width / 2, startY + i * 52));
-  ctx.strokeStyle = 'rgba(255,45,126,0.85)';
-  ctx.lineWidth = 10;
-  ctx.beginPath();
-  ctx.moveTo(40, 70); ctx.lineTo(cv.width - 50, cv.height - 80);
-  ctx.stroke();
+  ctx.textBaseline = 'middle';
+  const cx = (x0 + x1) / 2;
+  const startY = (y0 + y1) / 2 - ((lines.length - 1) * lh) / 2;
+  lines.forEach((l, i) => ctx.fillText(l, cx, startY + i * lh));
 
   const tex = new THREE.CanvasTexture(cv);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
+
+  const PW = 1.55, PH = PW * (H / W);
   const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(1.5, 0.94),
-    new THREE.MeshStandardMaterial({ map: tex, side: THREE.DoubleSide, roughness: 0.9, metalness: 0 })
+    new THREE.PlaneGeometry(PW, PH),
+    new THREE.MeshStandardMaterial({
+      map: tex, side: THREE.DoubleSide, transparent: true, alphaTest: 0.3,
+      roughness: 0.95, metalness: 0
+    })
   );
-  mesh.position.set(0.6, 4.4, 0.55);
+  mesh.position.set(0.45, 3.9, 1.1);
   return mesh;
 }
 
 function shredPaper() {
   if (!paper) return;
-  const baseColor = new THREE.Color(0xece7d9);
+  const tans = [0xcdb78a, 0xb59a68, 0xe2d3a8];
   const px = paper.position.x;
-  const count = reduceMotion ? 18 : 46;
+  const count = reduceMotion ? 18 : 50;
   for (let i = 0; i < count; i++) {
-    const useNeon = Math.random() < 0.22;
-    const col = useNeon ? new THREE.Color(NEON[(Math.random() * NEON.length) | 0]) : baseColor;
+    const useNeon = Math.random() < 0.16;
+    const col = new THREE.Color(useNeon ? NEON[(Math.random() * NEON.length) | 0] : tans[(Math.random() * tans.length) | 0]);
     const m = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.14 + Math.random() * 0.1, 0.05 + Math.random() * 0.05),
+      new THREE.PlaneGeometry(0.15 + Math.random() * 0.12, 0.06 + Math.random() * 0.06),
       new THREE.MeshStandardMaterial({
         color: col, side: THREE.DoubleSide, transparent: true, opacity: 1,
         roughness: 0.9, emissive: useNeon ? col : 0x000000, emissiveIntensity: useNeon ? 0.7 : 0
       })
     );
-    m.position.set(px + (Math.random() - 0.5) * 0.6, 1.45, 0.2 + (Math.random() - 0.5) * 0.4);
+    m.position.set(px + (Math.random() - 0.5) * 0.7, 1.5, 0.2 + (Math.random() - 0.5) * 0.4);
     m.userData.vel = new THREE.Vector3((Math.random() - 0.5) * 3.2, -Math.random() * 1.5 - 0.5, (Math.random() - 0.5) * 3.2 + 1.2);
     m.userData.rot = new THREE.Vector3(Math.random() * 12, Math.random() * 12, Math.random() * 12);
     m.userData.life = 1;
@@ -359,7 +395,7 @@ function shredPaper() {
   scene.remove(paper);
   paper = null;
 
-  burstSparks();
+  burstSparks(px);
   grind = 1;
   shake = reduceMotion ? 0.04 : 0.16;
   punkPunch();
@@ -380,15 +416,15 @@ function tick() {
   if (rightRoller) rightRoller.rotation.x -= spin * dt;
   if (lever) lever.rotation.x = (grind > 0.05 ? Math.sin(time * 22) * 0.22 : 0) - 0.05;
 
+  // parchemin : descente lente et lisible, puis broyage
   if (paper) {
     const u = paper.userData;
     u.t += dt;
-    const dur = 0.5;
-    const k = Math.min(u.t / dur, 1);
-    paper.position.y = 4.4 - k * 2.95;
-    paper.position.x = 0.6 + (paper.position.x - 0.6) * (1 - dt * 4);
-    paper.rotation.z = Math.sin(u.t * 18) * 0.25 * (1 - k);
-    paper.rotation.x = k * 0.6;
+    const k = Math.min(u.t / DROP_DURATION, 1);
+    const yTop = 3.9, yRollers = 1.75;
+    paper.position.y = yTop - (yTop - yRollers) * k;
+    paper.rotation.z = Math.sin(time * 1.6) * 0.05 * (1 - k * 0.5);
+    paper.rotation.x = k > 0.8 ? (k - 0.8) / 0.2 * 0.7 : 0; // s'incline en entrant dans les rouleaux
     if (k >= 1) shredPaper();
   }
 
@@ -423,9 +459,10 @@ function tick() {
   grind = Math.max(grind - dt * 1.1, 0);
   shake = Math.max(shake - dt * 0.6, 0);
 
-  camera.position.x = 0.4 + (Math.random() - 0.5) * shake;
-  camera.position.y = 1.9 + (Math.random() - 0.5) * shake;
-  camera.lookAt(0.2, 1.4, 0.2);
+  camera.position.x = CAM.x + (Math.random() - 0.5) * shake;
+  camera.position.y = CAM.y + (Math.random() - 0.5) * shake;
+  camera.position.z = CAM.z;
+  camera.lookAt(LOOK.x, LOOK.y, LOOK.z);
 
   renderer.render(scene, camera);
 }
@@ -442,7 +479,7 @@ function playGrindSound() {
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     const ctx = audioCtx;
-    const dur = 0.45;
+    const dur = 0.5;
     const buf = ctx.createBuffer(1, ctx.sampleRate * dur, ctx.sampleRate);
     const data = buf.getChannelData(0);
     for (let i = 0; i < data.length; i++) {

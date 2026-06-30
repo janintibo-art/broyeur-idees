@@ -21,7 +21,8 @@ broyeur-idees/
 ├─ LICENSE
 ├─ README.md                  # ce fichier
 ├─ public/
-│  └─ punk.glb                # le personnage punk 3D + ses 12 animations (Meshy)
+│  ├─ punk.glb                # le personnage punk 3D + ses 12 animations (Meshy)
+│  └─ parchment.png           # le parchemin (fond transparent) sur lequel s'affiche le texte
 ├─ src/
 │  ├─ main.js                 # logique : bouton BROYER, micro, compteur
 │  ├─ scene.js                # la scène 3D : charge punk.glb, le broyeur, l'animation
@@ -131,6 +132,11 @@ c'est 2 lignes à changer dans `src/main.js`.)
 - **Le broyeur, les étincelles, les confettis** : dans `src/scene.js`
   (`buildGrinder()`, `shredPaper()`…).
 - **La langue de la dictée** : `'fr-FR'` dans `src/voice.js`.
+- **Le cadrage de la caméra** : objets `CAM` et `LOOK` en haut de `src/scene.js`.
+- **La vitesse du broyage** : constante `DROP_DURATION` dans `src/scene.js`
+  (plus grand = le parchemin descend plus lentement, plus le temps de lire).
+- **Le parchemin** : remplace `public/parchment.png` (PNG à fond transparent).
+  Le texte écrit s'adapte tout seul à la taille du parchemin.
 
 ### 🤘 Le personnage punk
 
